@@ -2,49 +2,69 @@ import React, { useState, useEffect } from "react";
 import Viewer from "./Viewer";
 import { Catalog } from 'consolid-daapi'
 import { ReferenceRegistry } from 'consolid-raapi'
-import { Session } from '@inrupt/solid-client-authn-browser'
+import { QueryEngine } from "@comunica/query-sparql";
+import { DCAT } from '@inrupt/vocab-common-rdf'
+import {Button, FormGroup, FormControlLabel, Checkbox} from '@mui/material'
 
 const LBDviewer = (props) => {
   const { piral } = props
   const constants = piral.getData("CONSTANTS")
-  
-  const [models, setModels] = useState(["http://localhost:3000/engineer/f177466f-5929-445f-b2d7-ee19576c7d3a"])
+
+  const [models, setModels] = useState([])
   const [dataset, setDataset] = useState("")
   const [selection, setSelection] = useState([])
-  const [session, setSession] = useState(new Session())
-  const [height, setHeight] = useState(600)
+  const [height, setHeight] = useState(300)
+
+  const [activeModels, setActiveModels] = useState([])
+
+  async function getModels() {
+    const project = piral.getData(constants.ACTIVE_PROJECT)
+
+    const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
+    setModels(results)
+  }
+  
+  piral.on('store-data', ({ name, value }) => {
+    if (name === constants.SELECTED_CONCEPTS) {
+      const sel = value.map(item => item.references.filter((ref) => models.map(m => m.dUrl).includes(ref.document))).flat().map(i => i.identifier)
+      setSelection(sel)
+    }
+  });
 
   async function onSelect(sel) {
     setSelection(sel)
-    const alias = await findAliases(models[0], sel[0], props.state[constants.ACTIVE_PROJECT], props.state[constants.REFERENCE_REGISTRY], session)
-    piral.setDataGlobal(constants.SELECTED_CONCEPTS, [alias])
+    piral.setDataGlobal(constants.SELECTED_REFERENCES, [{activeDocument: models[0].dUrl, identifier: sel[0]}])
   }
 
-  async function findAliases(activeDocument, selectedElement, projectUrl, referenceRegistryUrl, activeSession) {
-    const project = new Catalog(activeSession, projectUrl)
-    const refReg = new ReferenceRegistry(activeSession, referenceRegistryUrl, project)
-    const reference = await refReg.findConceptByIdentifier(activeDocument, selectedElement)
-    return reference
+  function setActive(data, model) {
+    setActiveModels(prev => {
+      if (prev.includes(model.dUrl)) {
+        return prev.filter(item => item != model.dUrl)
+      } else {
+        return [...prev, model.dUrl]
+      }
+    })
   }
 
-  function getCurrentSelection() {
-    if (props.state[constants.SELECTED_CONCEPTS]) {
-      return props.state[constants.SELECTED_CONCEPTS].map(item => item.references.filter((ref) => models.includes(ref.document))).flat().map(i => i.identifier)
-    } else {
-      return []
-    }
-  }
 
   return (
     <div>
-      {(models.length) ? (
+      <div>
+    <Button onClick={() => getModels()} >Get GlTF models in project</Button>
+      </div>
+      <FormGroup>
+      {models.map(model => {
+        return <FormControlLabel key={model.dUrl} control={<Checkbox onChange={(i) => setActive(i, model)}/>} label={model.dUrl} />
+      })}
+    </FormGroup>
+      {(activeModels.length) ? (
         <div>
           <Viewer
             height={height}
-            models={models}
+            models={activeModels}
             projection={"perspective"}
             onSelect={onSelect}
-            selection={getCurrentSelection()}
+            selection={selection}
           />
         </div>
       ) : (
