@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from "react";
 import Viewer from "./Viewer";
-import { Catalog } from 'consolid-daapi'
-import { ReferenceRegistry } from 'consolid-raapi'
-import { QueryEngine } from "@comunica/query-sparql";
-import { DCAT } from '@inrupt/vocab-common-rdf'
 import {Button, FormGroup, FormControlLabel, Checkbox} from '@mui/material'
 
 const LBDviewer = (props) => {
@@ -38,10 +34,10 @@ const LBDviewer = (props) => {
 
   function setActive(data, model) {
     setActiveModels(prev => {
-      if (prev.includes(model.dUrl)) {
-        return prev.filter(item => item != model.dUrl)
+      if (prev.includes(model.dUrl.value)) {
+        return prev.filter(item => item != model.dUrl.value)
       } else {
-        return [...prev, model.dUrl]
+        return [...prev, model.dUrl.value]
       }
     })
   }
@@ -54,7 +50,7 @@ const LBDviewer = (props) => {
       </div>
       <FormGroup>
       {models.map(model => {
-        return <FormControlLabel key={model.dUrl} control={<Checkbox onChange={(i) => setActive(i, model)}/>} label={model.dUrl} />
+        return <FormControlLabel key={model.dUrl} control={<Checkbox onChange={(i) => setActive(i, model)}/>} label={model.dUrl.value} />
       })}
     </FormGroup>
       {(activeModels.length) ? (

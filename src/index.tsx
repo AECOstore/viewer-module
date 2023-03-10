@@ -6,6 +6,7 @@ import App from './App'
 
 export function setup(app: PiletApi) {
   const constants = app.getData("CONSTANTS")
+  console.log('app.meta viewer', app.meta) 
   const connect = app.makeState(app, constants)
   const Module = connect(({ state, actions }) => app.withState(App, { app, state, actions }))
   app.showNotification(`Hello from ${app.meta.name} component!`, {
