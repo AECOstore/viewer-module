@@ -10,7 +10,7 @@ const LBDviewer = (props) => {
   const [dataset, setDataset] = useState("")
   const [selection, setSelection] = useState([])
   const [height, setHeight] = useState(300)
-
+  const [associatedConcepts, setAssociatedConcepts] = useState({})
   const [activeModels, setActiveModels] = useState([])
 
   async function getModels() {
@@ -19,29 +19,49 @@ const LBDviewer = (props) => {
     const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
     setModels(results)
   }
-  
+
   piral.on('store-data', ({ name, value }) => {
     if (name === constants.SELECTED_CONCEPTS) {
-      const sel = value.map(item => item.references.filter((ref) => models.map(m => m.dUrl).includes(ref.document))).flat().map(i => i.identifier)
+      const sel = value.map(item => item.references.filter((ref) => models.map(m => m.resource.value).includes(ref.document))).flat().map(i => i.identifier)
       setSelection(sel)
     }
   });
 
   async function onSelect(sel) {
-    setSelection(sel)
-    piral.setDataGlobal(constants.SELECTED_REFERENCES, [{activeDocument: models[0].dUrl, identifier: sel[0]}])
+    const project = piral.getData(constants.ACTIVE_PROJECT)
+    const allReferences = []
+    for (const model of Object.keys(associatedConcepts)) {
+      const references = await piral.getAllReferences(associatedConcepts[model], sel, project)
+      allReferences.push(references)
+    }
+    console.log('allReferences.flat() :>> ', allReferences.flat());
+    piral.setDataGlobal(constants.SELECTED_CONCEPTS, allReferences.flat())
   }
 
   function setActive(data, model) {
     setActiveModels(prev => {
-      if (prev.includes(model.dUrl.value)) {
-        return prev.filter(item => item != model.dUrl.value)
+      if (prev.includes(model.resource.value)) {
+        return prev.filter(item => item != model.resource.value)
       } else {
-        return [...prev, model.dUrl.value]
+        return [...prev, model.resource.value]
+      }
+    })
+    setAssociatedConcepts(prev => {
+      if (Object.keys(prev).includes(model.resource.value)) {
+        data = {...prev}
+        delete data[model.resource.value]
+        return data
+      } else {
+        return prev
       }
     })
   }
 
+  async function getAssociatedConcepts(model) {
+    const project = piral.getData(constants.ACTIVE_PROJECT)
+    const data = await piral.getAssociatedConcepts(model.resource.value, project)
+    setAssociatedConcepts(prev => {return {...prev, [model]: data}})
+  }
 
   return (
     <div>
@@ -50,7 +70,7 @@ const LBDviewer = (props) => {
       </div>
       <FormGroup>
       {models.map(model => {
-        return <FormControlLabel key={model.dUrl} control={<Checkbox onChange={(i) => setActive(i, model)}/>} label={model.dUrl.value} />
+        return <FormControlLabel key={model.resource.value} control={<Checkbox onChange={async (i) => {setActive(i, model); await getAssociatedConcepts(model)}}/>} label={model.resource.value} />
       })}
     </FormGroup>
       {(activeModels.length) ? (
