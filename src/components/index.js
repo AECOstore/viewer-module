@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Viewer from "./Viewer";
-import {Button, FormGroup, FormControlLabel, Checkbox} from '@mui/material'
+import { Button, FormGroup, FormControlLabel, Checkbox } from '@mui/material'
 
 const LBDviewer = (props) => {
   const { piral } = props
@@ -13,17 +13,41 @@ const LBDviewer = (props) => {
   const [associatedConcepts, setAssociatedConcepts] = useState({})
   const [activeModels, setActiveModels] = useState([])
 
+  useEffect(() => {
+    const value = piral.getData(constants.SELECTED_CONCEPTS)
+    if (value) {
+      let sel = value.map(i => i.references).flat()
+      sel = sel.filter((ref) => activeModels.includes(ref.document)).map(i => i.identifier)
+      setSelection(sel)
+    }
+  }, [activeModels])
+
   async function getModels() {
     const project = piral.getData(constants.ACTIVE_PROJECT)
-
     const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
-    setModels(results)
+    const m = results.map(a => a.resource.value)
+    setModels(m)
   }
 
-  piral.on('store-data', ({ name, value }) => {
+  piral.on('store-data', async ({ name, value }) => {
     if (name === constants.SELECTED_CONCEPTS) {
-      const sel = value.map(item => item.references.filter((ref) => models.map(m => m.resource.value).includes(ref.document))).flat().map(i => i.identifier)
-      setSelection(sel)
+      console.log('value :>> ', value);
+      console.log('activeModels :>> ', activeModels);
+      const subset = value.map(item => {
+        const gltfRefs = []
+        item.references.forEach(ref => {
+          console.log('ref :>> ', ref);
+          if (activeModels.includes(ref.document)) gltfRefs.push(ref.identifier)
+        })
+        return gltfRefs
+      }).flat()
+
+      // .map(item => item.identifier)
+      console.log('subset :>> ', subset);
+      setSelection(subset)
+      // const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
+      // const m = new Set(value.map(item => item.references.map(m => m.document)).flat().filter(i => results.map(a => a.resource.value).includes(i)))
+      // setModels(Array.from(m))
     }
   });
 
@@ -34,22 +58,22 @@ const LBDviewer = (props) => {
       const references = await piral.getAllReferences(associatedConcepts[model], sel, project)
       allReferences.push(references)
     }
-    console.log('allReferences.flat() :>> ', allReferences.flat());
     piral.setDataGlobal(constants.SELECTED_CONCEPTS, allReferences.flat())
   }
 
   function setActive(data, model) {
+    console.log('model :>> ', model);
     setActiveModels(prev => {
-      if (prev.includes(model.resource.value)) {
-        return prev.filter(item => item != model.resource.value)
+      if (prev.includes(model)) {
+        return prev.filter(item => item != model)
       } else {
-        return [...prev, model.resource.value]
+        return [...prev, model]
       }
     })
     setAssociatedConcepts(prev => {
-      if (Object.keys(prev).includes(model.resource.value)) {
-        data = {...prev}
-        delete data[model.resource.value]
+      if (Object.keys(prev).includes(model)) {
+        data = { ...prev }
+        delete data[model]
         return data
       } else {
         return prev
@@ -59,20 +83,29 @@ const LBDviewer = (props) => {
 
   async function getAssociatedConcepts(model) {
     const project = piral.getData(constants.ACTIVE_PROJECT)
-    const data = await piral.getAssociatedConcepts(model.resource.value, project)
-    setAssociatedConcepts(prev => {return {...prev, [model]: data}})
+    const data = await piral.getAssociatedConcepts(model, project)
+    setAssociatedConcepts(prev => { return { ...prev, [model]: data } })
   }
 
   return (
     <div>
       <div>
-    <Button onClick={() => getModels()} >Get GlTF models in project</Button>
+        <Button onClick={() => getModels()} >Get GlTF models in project</Button>
       </div>
       <FormGroup>
-      {models.map(model => {
-        return <FormControlLabel key={model.resource.value} control={<Checkbox onChange={async (i) => {setActive(i, model); await getAssociatedConcepts(model)}}/>} label={model.resource.value} />
-      })}
-    </FormGroup>
+        {(models.length) ? (
+          <div>
+            {/* <p>Active concepts were found in the following GLTF models. Open models?</p> */}
+            {models.map(model => {
+              return <FormControlLabel key={model} control={<Checkbox onChange={async (i) => { setActive(i, model); await getAssociatedConcepts(model) }} />} label={model} />
+            })}
+          </div>
+
+        ) : (
+          <></>
+        )}
+
+      </FormGroup>
       {(activeModels.length) ? (
         <div>
           <Viewer
