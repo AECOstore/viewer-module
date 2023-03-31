@@ -31,19 +31,15 @@ const LBDviewer = (props) => {
 
   piral.on('store-data', async ({ name, value }) => {
     if (name === constants.SELECTED_CONCEPTS) {
-      console.log('value :>> ', value);
-      console.log('activeModels :>> ', activeModels);
       const subset = value.map(item => {
         const gltfRefs = []
         item.references.forEach(ref => {
-          console.log('ref :>> ', ref);
           if (activeModels.includes(ref.document)) gltfRefs.push(ref.identifier)
         })
         return gltfRefs
       }).flat()
 
       // .map(item => item.identifier)
-      console.log('subset :>> ', subset);
       setSelection(subset)
       // const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
       // const m = new Set(value.map(item => item.references.map(m => m.document)).flat().filter(i => results.map(a => a.resource.value).includes(i)))
@@ -62,7 +58,6 @@ const LBDviewer = (props) => {
   }
 
   function setActive(data, model) {
-    console.log('model :>> ', model);
     setActiveModels(prev => {
       if (prev.includes(model)) {
         return prev.filter(item => item != model)
