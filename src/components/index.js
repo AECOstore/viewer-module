@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import Viewer from "./Viewer";
-import { Button, FormGroup, FormControlLabel, Checkbox } from '@mui/material'
+import { Button, FormGroup, FormControlLabel, Checkbox, ClickAwayListener } from '@mui/material'
 
 const LBDviewer = (props) => {
   const { piral } = props
@@ -23,22 +23,25 @@ const LBDviewer = (props) => {
   }, [activeModels])
 
   async function getModels() {
-    const project = piral.getData(constants.ACTIVE_PROJECT)
-    const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
-    const m = results.map(a => a.resource.value)
+    const results = await piral.getResourcesByContentType(piral, ["https://www.iana.org/assignments/media-types/model/gltf+json"])
+    console.log('results :>> ', results);
+    const m = results.map(a => a.distribution)
     setModels(m)
   }
 
   piral.on('store-data', async ({ name, value }) => {
     if (name === constants.SELECTED_CONCEPTS) {
-      const subset = value.map(item => {
+
+      const subset = Object.keys(value).map(i => {
+        const item = value[i]
         const gltfRefs = []
         item.references.forEach(ref => {
-          if (activeModels.includes(ref.document)) gltfRefs.push(ref.identifier)
+          if (activeModels.includes(ref.source)) gltfRefs.push(ref.value)
         })
         return gltfRefs
       }).flat()
 
+      console.log('subset :>> ', subset);
       // .map(item => item.identifier)
       setSelection(subset)
       // const results = await piral.getResourcesByContentType(project, "https://www.iana.org/assignments/media-types/model/gltf+json")
@@ -48,13 +51,16 @@ const LBDviewer = (props) => {
   });
 
   async function onSelect(sel) {
-    const project = piral.getData(constants.ACTIVE_PROJECT)
+    console.log('sel :>> ', sel);
     const allReferences = []
-    for (const model of Object.keys(associatedConcepts)) {
-      const references = await piral.getAllReferences(associatedConcepts[model], sel, project)
-      allReferences.push(references)
+    const referenceRegistries = await piral.getReferenceRegistries(piral)
+    const sparql = piral.getData(constants.SPARQL_STORE)
+    let references = {}
+    for (const id of sel) {
+      const reference = await piral.findCollectionBySelector(referenceRegistries, undefined, sel, sparql)
+      references = { ...references, ...reference }
     }
-    piral.setDataGlobal(constants.SELECTED_CONCEPTS, allReferences.flat())
+    piral.setDataGlobal(constants.SELECTED_CONCEPTS, references)
   }
 
   function setActive(data, model) {
@@ -65,15 +71,15 @@ const LBDviewer = (props) => {
         return [...prev, model]
       }
     })
-    setAssociatedConcepts(prev => {
-      if (Object.keys(prev).includes(model)) {
-        data = { ...prev }
-        delete data[model]
-        return data
-      } else {
-        return prev
-      }
-    })
+    // setAssociatedConcepts(prev => {
+    //   if (Object.keys(prev).includes(model)) {
+    //     data = { ...prev }
+    //     delete data[model]
+    //     return data
+    //   } else {
+    //     return prev
+    //   }
+    // })
   }
 
   async function getAssociatedConcepts(model) {
@@ -92,7 +98,7 @@ const LBDviewer = (props) => {
           <div>
             {/* <p>Active concepts were found in the following GLTF models. Open models?</p> */}
             {models.map(model => {
-              return <FormControlLabel key={model} control={<Checkbox onChange={async (i) => { setActive(i, model); await getAssociatedConcepts(model) }} />} label={model} />
+              return <FormControlLabel key={model} control={<Checkbox onChange={async (i) => { setActive(i, model)}} />} label={model} />
             })}
           </div>
 

@@ -6,12 +6,12 @@
 @prefix sh: <http://www.w3.org/ns/shacl#> .
 
 <> a mfe:Manifest;
-rdfs:label "query" ;
+rdfs:label "viewer" ;
     pav:hasVersion <#v2> .
 
 
 <#v2> a mfe:Edition ;
     doap:revision "v2" ;
-    mfe:code <http://localhost:2003/$pilet-api/0/index.js> .
-
-    
+    mfe:code <http://localhost:2003/$pilet-api/0/index.js> ;
+    # mfe:code <https://aecostore.github.io/viewer-module/index.js> ;
+    mfe:compatibleMedia <https://www.iana.org/assignments/media-types/model/gltf+json> .
