@@ -9,7 +9,7 @@ const LBDviewer = (props) => {
   const [models, setModels] = useState([])
   const [dataset, setDataset] = useState("")
   const [selection, setSelection] = useState([])
-  const [height, setHeight] = useState(300)
+  const [height, setHeight] = useState(600)
   const [associatedConcepts, setAssociatedConcepts] = useState({})
   const [activeModels, setActiveModels] = useState([])
 
@@ -31,7 +31,7 @@ const LBDviewer = (props) => {
 
   piral.on('store-data', async ({ name, value }) => {
     if (name === constants.SELECTED_CONCEPTS) {
-
+      console.log('value :>> ', value);
       const subset = Object.keys(value).map(i => {
         const item = value[i]
         const gltfRefs = []
