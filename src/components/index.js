@@ -24,7 +24,6 @@ const LBDviewer = (props) => {
 
   async function getModels() {
     const results = await piral.getResourcesByContentType(piral, ["https://www.iana.org/assignments/media-types/model/gltf+json"])
-    console.log('results :>> ', results);
     const m = results.map(a => a.distribution)
     setModels(m)
   }
@@ -51,13 +50,11 @@ const LBDviewer = (props) => {
   });
 
   async function onSelect(sel) {
-    console.log('sel :>> ', sel);
-    const allReferences = []
     const referenceRegistries = await piral.getReferenceRegistries(piral)
     const sparql = piral.getData(constants.SPARQL_STORE)
     let references = {}
     for (const id of sel) {
-      const reference = await piral.findCollectionBySelector(referenceRegistries, undefined, sel, sparql)
+      const reference = await piral.findCollectionBySelector(referenceRegistries, undefined, id, sparql)
       references = { ...references, ...reference }
     }
     piral.setDataGlobal(constants.SELECTED_CONCEPTS, references)

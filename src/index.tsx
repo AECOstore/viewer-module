@@ -2,8 +2,6 @@ import * as React from 'react';
 import { PiletApi } from 'consolid-shell';
 import App from './App'
 
-
-
 export function setup(app: PiletApi) {
   const constants = app.getData("CONSTANTS")
   const connect = app.makeState(app, constants)
@@ -12,9 +10,9 @@ export function setup(app: PiletApi) {
     autoClose: 2000,
   });
   app.registerTile(Module, {
-    initialColumns: app.meta["initialColumns"],
-    initialRows: app.meta["initialRows"],
-    resizable: true
+    initialColumns: 8,
+    initialRows: 8,
+    resizable: false
   })
   app.registerExtension(app.meta["link"], Module)
   
